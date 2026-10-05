@@ -1,6 +1,6 @@
-# RiskForge
+# Crypto Lending Risk Simulator
 
-A quantitative protocol risk and stress-testing engine for simulating market shocks, estimating liquidation exposure, modeling liquidation cascades, attributing tail risk, and analyzing systemic risk under uncertainty.
+Simulate how falling crypto prices trigger loan liquidations, spread through a lending protocol, and create unpaid debt. Compare market shocks, liquidity assumptions, and the assets driving the worst modeled outcomes.
 
 ## Why I Built This
 
@@ -10,7 +10,7 @@ That led to a broader question:
 
 > How can we move from evaluating individual lending positions to measuring protocol-level risk under deterministic and stochastic market stress?
 
-RiskForge explores that question through position-level risk modeling, deterministic stress testing, asset-specific scenarios, endogenous liquidation-cascade simulation, cascade-aware Monte Carlo analysis, reverse stress testing, paired tail-risk attribution, historical market calibration, tail-risk evaluation, and parameter sensitivity.
+Crypto Lending Risk Simulator explores that question through position-level risk modeling, deterministic stress testing, asset-specific scenarios, endogenous liquidation-cascade simulation, cascade-aware Monte Carlo analysis, reverse stress testing, paired tail-risk attribution, historical market calibration, tail-risk evaluation, and parameter sensitivity.
 
 ## Questions I Wanted to Answer
 
@@ -42,7 +42,7 @@ Rather than starting with a dashboard, I built the project around a sequence of 
 
 13. How much do simulation results change when volatility and cross-asset correlations are calibrated from historical market data rather than assumed?
 
-These questions drove the architecture of RiskForge.
+These questions drove the architecture of Crypto Lending Risk Simulator.
 
 ## Evaluation Flow
 
@@ -86,7 +86,7 @@ Each stage answers a different question rather than simply adding another visual
 
 Each lending position contains collateral value, debt, and a liquidation threshold.
 
-RiskForge derives metrics including:
+Crypto Lending Risk Simulator derives metrics including:
 
 - Loan-to-value ratio
 - Health factor
@@ -115,7 +115,7 @@ This answers:
 
 A single protocol-wide shock assumes every collateral asset moves identically.
 
-RiskForge therefore supports independent ETH, BTC, and SOL shocks.
+Crypto Lending Risk Simulator therefore supports independent ETH, BTC, and SOL shocks.
 
 This allows scenarios such as:
 
@@ -129,7 +129,7 @@ The resulting exposure can then be decomposed by collateral asset.
 
 First-order stress testing identifies positions that are liquidatable immediately after a market shock. It does not capture the feedback created by liquidation execution itself.
 
-RiskForge therefore includes an iterative liquidation-cascade engine. Each round:
+Crypto Lending Risk Simulator therefore includes an iterative liquidation-cascade engine. Each round:
 
 1. identifies positions with health factor below one,
 2. repays debt up to a configurable close factor,
@@ -165,14 +165,14 @@ Monte Carlo simulation asks:
 
 > What range of outcomes could occur, and how frequently do severe outcomes appear?
 
-RiskForge simulates correlated ETH, BTC, and SOL market returns using either Normal or Student-t return assumptions.
+Crypto Lending Risk Simulator simulates correlated ETH, BTC, and SOL market returns using either Normal or Student-t return assumptions.
 
 Each simulated market state is evaluated twice using the exact same return draw:
 
 1. **First-order stress:** positions are marked liquidatable immediately after the exogenous ETH/BTC/SOL move.
 2. **Cascade-aware stress:** the same move is passed through the liquidation-cascade engine so liquidation sales can create endogenous price impact, secondary liquidations, and bad debt.
 
-Because the two evaluations are paired on the same market draw, RiskForge can measure modeled cascade amplification directly rather than comparing unrelated random scenarios.
+Because the two evaluations are paired on the same market draw, Crypto Lending Risk Simulator can measure modeled cascade amplification directly rather than comparing unrelated random scenarios.
 
 For each simulation it records:
 
@@ -193,7 +193,7 @@ Reverse stress testing starts with a failure threshold and asks:
 
 > What is the smallest modeled market decline that causes this threshold to be breached?
 
-RiskForge solves that problem with a bracketed search and bisection over the same protocol and cascade mechanics used elsewhere in the project. Supported targets include:
+Crypto Lending Risk Simulator solves that problem with a bracketed search and bisection over the same protocol and cascade mechanics used elsewhere in the project. Supported targets include:
 
 - first-order liquidatable debt share,
 - cascade-aware debt exposure,
@@ -212,7 +212,7 @@ Reverse-stress thresholds are model-based breakpoints, not forecasts of future m
 
 Portfolio-level tail metrics show how severe the worst simulated outcomes become, but they do not explain which collateral asset is driving those outcomes.
 
-RiskForge therefore includes a paired leave-one-asset-out attribution layer. For each simulated ETH/BTC/SOL market draw:
+Crypto Lending Risk Simulator therefore includes a paired leave-one-asset-out attribution layer. For each simulated ETH/BTC/SOL market draw:
 
 1. the full scenario is evaluated through the cascade engine,
 2. the exact same scenario is re-run with one asset's exogenous return set to zero,
@@ -228,13 +228,13 @@ The attribution tracks marginal effects on:
 - secondary liquidations, and
 - endogenous price decline.
 
-RiskForge reports both unconditional average contribution and tail-conditioned contribution for the worst cascade-exposure and bad-debt cohorts. This makes it possible for an asset to appear modest on average while still being an important driver of severe outcomes.
+Crypto Lending Risk Simulator reports both unconditional average contribution and tail-conditioned contribution for the worst cascade-exposure and bad-debt cohorts. This makes it possible for an asset to appear modest on average while still being an important driver of severe outcomes.
 
 These leave-one-asset-out effects are not an additive decomposition. Liquidation cascades are nonlinear and assets interact through correlated shocks and protocol state, so ETH, BTC, and SOL marginal contributions can overlap and are not expected to sum exactly to total risk.
 
 ### 8. Historical Calibration
 
-Rather than relying exclusively on assumed market parameters, RiskForge can estimate volatility and cross-asset dependence from historical ETH, BTC, and SOL prices.
+Rather than relying exclusively on assumed market parameters, Crypto Lending Risk Simulator can estimate volatility and cross-asset dependence from historical ETH, BTC, and SOL prices.
 
 The current calibration snapshot uses historical data beginning in January 2022.
 
@@ -260,7 +260,7 @@ The calibrated correlation matrix was also checked for positive semidefiniteness
 
 Mean exposure alone can hide severe but less frequent outcomes.
 
-RiskForge therefore evaluates first-order and cascade-aware tails separately, including:
+Crypto Lending Risk Simulator therefore evaluates first-order and cascade-aware tails separately, including:
 
 - Median exposure
 - 90th, 95th, and 99th percentile cascade exposure
@@ -278,7 +278,7 @@ This makes it possible to see not only whether a market draw is severe, but whet
 
 Risk estimates depend on model and protocol assumptions.
 
-RiskForge therefore performs counterfactual liquidation-threshold sensitivity analysis under a fixed market shock.
+Crypto Lending Risk Simulator therefore performs counterfactual liquidation-threshold sensitivity analysis under a fixed market shock.
 
 The liquidation-cascade lab exposes market depth, close factor, liquidation bonus, price-impact strength, and maximum cascade rounds so the effect of execution assumptions can be inspected directly.
 
@@ -442,3 +442,12 @@ Launch the Streamlit application:
 ```bash
 streamlit run app.py
 ```
+
+## Asset attribution methods
+
+The Tail Risk Attribution page offers two ways to explain asset contributions:
+
+- **Remove one asset’s shock:** measure the change when one asset’s market move is neutralized. These effects can overlap and need not add up to total exposure.
+- **Split shared effects (Shapley):** use the existing exact coalition engine to allocate the change from a no-market-shock baseline across assets. For ETH, BTC, and SOL, this evaluates all eight coalitions. Contributions sum to the change from baseline, rather than necessarily to total exposure.
+
+Both options use the same simulation controls and display tail-conditioned exposure, bad debt, and scenario contributions. Shapley mode reports an allocation reconciliation gap. Download buttons export the summary and scenario contributions, including the attribution method.

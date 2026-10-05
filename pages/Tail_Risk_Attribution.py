@@ -1,29 +1,39 @@
 import plotly.express as px
 import streamlit as st
 
+from src.attribution_view import attribution_frames
+from src.shapley_attribution import run_shapley_tail_risk_attribution
 from src.data_generator import generate_protocol_positions
 from src.tail_risk_attribution import run_tail_risk_attribution
 
 
 st.set_page_config(
-    page_title="RiskForge · Tail Risk Attribution",
+    page_title="Crypto Lending Risk Simulator · Tail Risk Attribution",
     page_icon="🧭",
     layout="wide",
 )
 
 st.title("Tail Risk Attribution")
 
-st.write(
-    "Identify which collateral assets contribute most to modeled cascade tail risk. "
-    "Each simulated market draw is evaluated once in full and then re-run with one "
-    "asset's exogenous shock neutralized while every other assumption stays fixed."
+st.write("Explore which collateral assets drive the worst modeled liquidation outcomes.")
+method = st.radio(
+    "How should asset contributions be measured?",
+    ["Remove one asset's shock", "Split shared effects (Shapley)"],
+    horizontal=True,
 )
-
-st.info(
-    "Leave-one-asset-out contributions are marginal counterfactual effects, not an "
-    "additive decomposition. Cascade interactions can overlap, so ETH + BTC + SOL "
-    "contributions do not have to equal total protocol risk."
-)
+use_shapley = method == "Split shared effects (Shapley)"
+contribution_label = "Allocated" if use_shapley else "Marginal"
+if use_shapley:
+    st.info(
+        "Shapley attribution divides the change from a no-market-shock baseline across assets, "
+        "averaging over every possible order of asset shocks. The contributions add up to "
+        "that change, which can differ from total exposure if the baseline is already risky."
+    )
+else:
+    st.info(
+        "Each asset's shock is removed in turn while other shocks stay fixed. These marginal "
+        "effects can overlap, so their sum need not equal total exposure."
+    )
 
 positions = generate_protocol_positions()
 
@@ -112,8 +122,9 @@ market_depth = {
     "SOL": sol_depth_m * 1_000_000.0,
 }
 
-with st.spinner("Running paired asset attribution..."):
-    result = run_tail_risk_attribution(
+runner = run_shapley_tail_risk_attribution if use_shapley else run_tail_risk_attribution
+with st.spinner("Calculating asset contributions..."):
+    result = runner(
         positions=positions,
         market_depth_usd=market_depth,
         n_simulations=n_simulations,
@@ -126,7 +137,9 @@ with st.spinner("Running paired asset attribution..."):
         price_impact_factor=price_impact_factor,
     )
 
-summary = result.asset_summary.copy()
+summary, attribution_results = attribution_frames(result, use_shapley)
+summary['attribution_method'] = 'exact_shapley' if use_shapley else 'leave_one_out'
+attribution_results['attribution_method'] = summary['attribution_method'].iloc[0]
 summary["mean_contribution_pct"] = (
     summary["mean_cascade_exposure_contribution"] * 100
 )
@@ -171,10 +184,10 @@ contribution_chart = px.bar(
     barmode="group",
     labels={
         "asset": "Collateral Asset",
-        "value": "Marginal Cascade Exposure Contribution (percentage points)",
+        "value": f"{contribution_label} Cascade Exposure Contribution (percentage points)",
         "variable": "Contribution Window",
     },
-    title="Average vs Tail-Conditioned Marginal Contribution",
+    title=f"Average vs Tail-Conditioned {contribution_label} Contribution",
 )
 
 st.plotly_chart(contribution_chart, width="stretch")
@@ -191,7 +204,7 @@ bad_debt_chart = px.bar(
             "Tail Mean Bad-Debt Contribution (percentage points)"
         ),
     },
-    title="Leave-One-Asset-Out Contribution in the Bad-Debt Tail",
+    title=f"{contribution_label} Contribution in the Bad-Debt Tail",
 )
 
 st.plotly_chart(bad_debt_chart, width="stretch")
@@ -236,8 +249,8 @@ asset_choice = st.selectbox(
     options=summary["asset"].tolist(),
 )
 
-asset_rows = result.attribution_results.loc[
-    result.attribution_results["asset"] == asset_choice
+asset_rows = attribution_results.loc[
+    attribution_results["asset"] == asset_choice
 ].copy()
 asset_rows["cascade_exposure_contribution_pct"] = (
     asset_rows["contribution_cascade_debt_share"] * 100
@@ -254,17 +267,28 @@ scenario_chart = px.scatter(
     labels={
         "asset_shock": f"{asset_choice} Simulated Return",
         "cascade_exposure_contribution_pct": (
-            "Marginal Cascade Exposure Contribution (pts)"
+            f"{contribution_label} Cascade Exposure Contribution (pts)"
         ),
     },
-    title=f"{asset_choice} Shock vs Marginal Cascade Contribution",
+    title=f"{asset_choice} Shock vs {contribution_label} Cascade Contribution",
 )
 
 st.plotly_chart(scenario_chart, width="stretch")
 
 st.write(
-    "A negative contribution is possible. It means neutralizing that asset's return "
-    "made the modeled protocol outcome worse in that particular paired scenario, "
-    "usually because the original asset return was positive or because nonlinear "
-    "cascade interactions changed the liquidation path."
+    "A negative allocated contribution means that the asset's shock reduced risk on average "
+    "across the evaluated coalition orders. Positive market returns or cascade interactions "
+    "can produce this result."
+    if use_shapley else
+    "A negative marginal contribution means that removing the asset's return made the "
+    "paired outcome worse. Positive market returns or cascade interactions can produce this result."
 )
+
+if use_shapley:
+    reconciliation = scenario_results["shapley_efficiency_error_cascade_debt_share"].abs().max()
+    st.caption(f"Largest allocation reconciliation gap: {reconciliation * 100:.10f} percentage points.")
+
+st.download_button("Download asset contribution summary", summary.to_csv(index=False),
+                   file_name="asset_contributions.csv", mime="text/csv")
+st.download_button("Download scenario-level contributions", attribution_results.to_csv(index=False),
+                   file_name="scenario_contributions.csv", mime="text/csv")

@@ -7,7 +7,7 @@ from src.liquidation_cascade import run_liquidation_cascade
 
 
 st.set_page_config(
-    page_title="RiskForge · Liquidation Cascade Lab",
+    page_title="Crypto Lending Risk Simulator · Liquidation Cascade Lab",
     page_icon="🌊",
     layout="wide",
 )

@@ -10,7 +10,7 @@ from src.reverse_stress import (
 
 
 st.set_page_config(
-    page_title="RiskForge · Reverse Stress Test",
+    page_title="Crypto Lending Risk Simulator · Reverse Stress Test",
     page_icon="🎯",
     layout="wide",
 )
