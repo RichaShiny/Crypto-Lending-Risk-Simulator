@@ -1,3 +1,5 @@
+from numbers import Integral, Real
+
 import numpy as np
 import pandas as pd
 
@@ -35,13 +37,57 @@ def simulate_market_returns(
 
     Supported distributions:
         - "normal"
-        - "student_t"
+        - "student_t" (finite degrees of freedom greater than two)
+
+    Volatility must be finite and nonnegative for every asset. Correlation
+    matrices use ETH/BTC/SOL order and must be valid positive semidefinite
+    correlation matrices. Invalid settings raise ValueError before sampling.
     """
+    for name, value in (("n_simulations", n_simulations), ("horizon_days", horizon_days)):
+        if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral) or value <= 0:
+            raise ValueError(f"{name} must be a positive integer")
+    if isinstance(seed, (bool, np.bool_)) or not isinstance(seed, Integral) or seed < 0:
+        raise ValueError("seed must be a nonnegative integer")
+    if distribution not in ("normal", "student_t"):
+        raise ValueError("distribution must be 'normal' or 'student_t'")
+    if distribution == "student_t" and (
+        isinstance(degrees_of_freedom, (bool, np.bool_))
+        or not isinstance(degrees_of_freedom, Real)
+        or not np.isfinite(degrees_of_freedom)
+        or degrees_of_freedom <= 2
+    ):
+        raise ValueError("Student-t degrees_of_freedom must be finite and greater than 2")
+
     if annual_volatility is None:
         annual_volatility = ANNUAL_VOLATILITY
 
     if correlation_matrix is None:
         correlation_matrix = CORRELATION_MATRIX
+
+    for asset in ASSETS:
+        if asset not in annual_volatility:
+            raise ValueError(f"annual_volatility is missing asset: {asset}")
+        value = annual_volatility[asset]
+        if (isinstance(value, (bool, np.bool_)) or not isinstance(value, Real)
+                or not np.isfinite(value) or value < 0):
+            raise ValueError(f"annual volatility for {asset} must be nonnegative and finite")
+
+    try:
+        correlation_matrix = np.asarray(correlation_matrix, dtype=float)
+    except (TypeError, ValueError) as error:
+        raise ValueError("correlation_matrix must be a numeric 3-by-3 matrix") from error
+    if correlation_matrix.shape != (len(ASSETS), len(ASSETS)):
+        raise ValueError("correlation_matrix must be a 3-by-3 matrix in ETH, BTC, SOL order")
+    if not np.isfinite(correlation_matrix).all():
+        raise ValueError("correlation_matrix must contain finite values")
+    if not np.allclose(correlation_matrix, correlation_matrix.T, rtol=0, atol=1e-10):
+        raise ValueError("correlation_matrix must be symmetric")
+    if not np.allclose(np.diag(correlation_matrix), 1, rtol=0, atol=1e-10):
+        raise ValueError("correlation_matrix must have a unit diagonal")
+    if np.any(np.abs(correlation_matrix) > 1):
+        raise ValueError("correlation_matrix entries must be between -1 and 1")
+    if np.linalg.eigvalsh(correlation_matrix).min() < -1e-10:
+        raise ValueError("correlation_matrix must be positive semidefinite")
 
     rng = np.random.default_rng(seed)
 
