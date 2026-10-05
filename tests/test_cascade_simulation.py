@@ -163,3 +163,25 @@ def test_invalid_market_depth_is_rejected():
             },
             n_simulations=5,
         )
+
+
+def test_monte_carlo_preserves_round_limit_and_remaining_positions():
+    from unittest.mock import patch
+    from src.liquidation_cascade import run_liquidation_cascade
+
+    positions = _positions()
+    draws = pd.DataFrame([{'ETH': -0.6, 'BTC': -0.6, 'SOL': -0.6},
+                          {'ETH': 0.0, 'BTC': 0.0, 'SOL': 0.0}])
+    with patch('src.cascade_simulation.simulate_market_returns', return_value=draws):
+        results = run_cascade_aware_monte_carlo(positions, _market_depth(), n_simulations=2, max_rounds=1)
+    assert results['max_rounds_reached'].tolist() == [True, False]
+    for index, shocks in draws.iterrows():
+        expected = run_liquidation_cascade(positions, shocks.to_dict(), _market_depth(), max_rounds=1)
+        assert results.loc[index, 'remaining_liquidatable_positions'] == expected.summary['remaining_liquidatable_positions']
+    summary = summarize_cascade_monte_carlo(results)
+    assert summary['round_limited_simulations'] == 1
+    assert summary['probability_round_limit_reached'] == 0.5
+    legacy = results.drop(columns=['max_rounds_reached', 'remaining_liquidatable_positions'])
+    legacy_summary = summarize_cascade_monte_carlo(legacy)
+    assert 'round_limited_simulations' not in legacy_summary
+    assert 'probability_round_limit_reached' not in legacy_summary

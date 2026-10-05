@@ -170,6 +170,8 @@ def run_cascade_aware_monte_carlo(
                 "bad_debt_usd": bad_debt_usd,
                 "bad_debt_share": bad_debt_share,
                 "rounds_executed": int(cascade.summary["rounds_executed"]),
+                "max_rounds_reached": bool(cascade.summary["max_rounds_reached"]),
+                "remaining_liquidatable_positions": int(cascade.summary["remaining_liquidatable_positions"]),
                 "max_endogenous_price_decline": max_endogenous_price_decline,
             }
         )
@@ -236,6 +238,12 @@ def summarize_cascade_monte_carlo(
             results["max_endogenous_price_decline"].quantile(0.95)
         ),
     }
+
+    # Older exported runs do not contain the round-limit diagnostic.
+    # Omit it for those runs rather than treating unknown status as convergence.
+    if "max_rounds_reached" in results:
+        summary["round_limited_simulations"] = int(results["max_rounds_reached"].sum())
+        summary["probability_round_limit_reached"] = float(results["max_rounds_reached"].mean())
 
     for threshold in EXPOSURE_THRESHOLDS:
         label = int(threshold * 100)
