@@ -463,3 +463,9 @@ python -m src.run_bundle cascade_simulation_run.zip replayed_run.zip
 ```
 
 The command checks the bundled files before running and refuses to overwrite an existing output. It uses the stored positions rather than generating a new portfolio. Use the same source revision and package versions when comparing results; a seed alone does not guarantee identical results across engine or dependency changes. Checksums detect changed data files, but do not authenticate a bundle's origin. The export covers the main Monte Carlo run, not the optional market-depth sweep.
+
+### Market simulation input checks
+
+The shared return sampler rejects invalid settings before drawing scenarios: simulation counts and horizons must be positive integers, seeds must be nonnegative integers, and each asset needs finite, nonnegative annual volatility. Correlation matrices must be finite, symmetric 3×3 matrices in ETH/BTC/SOL order, with a unit diagonal, entries in [-1, 1], and positive semidefinite structure. Zero volatility and singular positive semidefinite correlations remain supported.
+
+The variance-normalized Student-t model requires finite degrees of freedom greater than two; values at or below two cannot support the configured finite variance. These checks apply to first-order Monte Carlo, cascade Monte Carlo, both attribution engines, and saved-run replay through their shared sampler.
