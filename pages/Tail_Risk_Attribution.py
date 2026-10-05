@@ -2,9 +2,8 @@ import plotly.express as px
 import streamlit as st
 
 from src.attribution_view import attribution_frames
-from src.shapley_attribution import run_shapley_tail_risk_attribution
+from src.dashboard_cache import cached_attribution
 from src.data_generator import generate_protocol_positions
-from src.tail_risk_attribution import run_tail_risk_attribution
 
 
 st.set_page_config(
@@ -122,10 +121,10 @@ market_depth = {
     "SOL": sol_depth_m * 1_000_000.0,
 }
 
-runner = run_shapley_tail_risk_attribution if use_shapley else run_tail_risk_attribution
 with st.spinner("Calculating asset contributions..."):
-    result = runner(
+    result = cached_attribution(
         positions=positions,
+        use_shapley=use_shapley,
         market_depth_usd=market_depth,
         n_simulations=n_simulations,
         horizon_days=horizon_days,
