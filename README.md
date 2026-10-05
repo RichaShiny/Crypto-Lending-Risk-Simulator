@@ -451,3 +451,15 @@ The Tail Risk Attribution page offers two ways to explain asset contributions:
 - **Split shared effects (Shapley):** use the existing exact coalition engine to allocate the change from a no-market-shock baseline across assets. For ETH, BTC, and SOL, this evaluates all eight coalitions. Contributions sum to the change from baseline, rather than necessarily to total exposure.
 
 Both options use the same simulation controls and display tail-conditioned exposure, bad debt, and scenario contributions. Shapley mode reports an allocation reconciliation gap. Download buttons export the summary and scenario contributions, including the attribution method.
+
+## Save and replay a cascade simulation
+
+On **Cascade Tail Risk**, select **Download this simulation run** to save a ZIP containing the actual lending positions, every paired market scenario, the risk summary, and a manifest with resolved engine settings (including the seed and defaults), Python/NumPy/pandas versions, source-file fingerprints, and data-file checksums.
+
+Replay the saved inputs from the repository root:
+
+```bash
+python -m src.run_bundle cascade_simulation_run.zip replayed_run.zip
+```
+
+The command checks the bundled files before running and refuses to overwrite an existing output. It uses the stored positions rather than generating a new portfolio. Use the same source revision and package versions when comparing results; a seed alone does not guarantee identical results across engine or dependency changes. Checksums detect changed data files, but do not authenticate a bundle's origin. The export covers the main Monte Carlo run, not the optional market-depth sweep.

@@ -8,6 +8,7 @@ from src.cascade_simulation import (
     summarize_cascade_monte_carlo,
 )
 from src.data_generator import generate_protocol_positions
+from src.run_bundle import build_run_bundle
 
 
 st.set_page_config(
@@ -110,20 +111,29 @@ market_depth = {
     "SOL": sol_depth_m * 1_000_000,
 }
 
+run_settings = dict(
+    market_depth_usd=market_depth,
+    n_simulations=n_simulations,
+    horizon_days=horizon_days,
+    seed=42,
+    distribution=distribution,
+    close_factor=close_factor,
+    liquidation_bonus=liquidation_bonus,
+    price_impact_factor=price_impact_factor,
+    max_rounds=max_rounds,
+)
 with st.spinner("Running paired cascade Monte Carlo stress test..."):
-    results = run_cascade_aware_monte_carlo(
-        positions=positions,
-        market_depth_usd=market_depth,
-        n_simulations=n_simulations,
-        horizon_days=horizon_days,
-        seed=42,
-        distribution=distribution,
-        close_factor=close_factor,
-        liquidation_bonus=liquidation_bonus,
-        price_impact_factor=price_impact_factor,
-        max_rounds=max_rounds,
-    )
+    results = run_cascade_aware_monte_carlo(positions=positions, **run_settings)
     summary = summarize_cascade_monte_carlo(results)
+
+st.download_button(
+    "Download this simulation run",
+    build_run_bundle(positions, results, run_settings),
+    file_name="cascade_simulation_run.zip",
+    mime="application/zip",
+    on_click="ignore",
+)
+st.caption("Includes lending positions, scenario results, summary, settings, and package versions.")
 
 col1, col2, col3, col4 = st.columns(4)
 col1.metric(
