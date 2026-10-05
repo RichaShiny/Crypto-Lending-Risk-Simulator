@@ -48,8 +48,8 @@ def build_run_bundle(positions, results, settings):
     return output.getvalue()
 
 
-def replay_run_bundle(bundle):
-    """Validate the stored files and rerun using the original positions/settings."""
+def load_run_bundle(bundle):
+    """Validate a saved run and return its manifest, positions, scenarios, and summary."""
     with zipfile.ZipFile(io.BytesIO(bundle)) as archive:
         manifest = json.loads(archive.read('manifest.json'))
         if manifest.get('schema_version') != 1 or manifest.get('engine') != 'cascade_aware_monte_carlo':
@@ -59,6 +59,14 @@ def replay_run_bundle(bundle):
             if hashlib.sha256(data).hexdigest() != manifest['sha256'].get(name):
                 raise ValueError(f'Checksum mismatch: {name}')
     positions = pd.read_csv(io.BytesIO(files['positions.csv']), float_precision='round_trip')
+    scenarios = pd.read_csv(io.BytesIO(files['scenarios.csv']), float_precision='round_trip')
+    summary = json.loads(files['summary.json'])
+    return manifest, positions, scenarios, summary
+
+
+def replay_run_bundle(bundle):
+    """Validate the stored files and rerun using the original positions/settings."""
+    manifest, positions, _, _ = load_run_bundle(bundle)
     settings = manifest['settings']
     if settings['correlation_matrix'] is not None:
         settings['correlation_matrix'] = np.asarray(settings['correlation_matrix'])

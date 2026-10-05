@@ -469,3 +469,9 @@ The command checks the bundled files before running and refuses to overwrite an 
 The shared return sampler rejects invalid settings before drawing scenarios: simulation counts and horizons must be positive integers, seeds must be nonnegative integers, and each asset needs finite, nonnegative annual volatility. Correlation matrices must be finite, symmetric 3×3 matrices in ETH/BTC/SOL order, with a unit diagonal, entries in [-1, 1], and positive semidefinite structure. Zero volatility and singular positive semidefinite correlations remain supported.
 
 The variance-normalized Student-t model requires finite degrees of freedom greater than two; values at or below two cannot support the configured finite variance. These checks apply to first-order Monte Carlo, cascade Monte Carlo, both attribution engines, and saved-run replay through their shared sampler.
+
+## Compare saved runs
+
+Open **Compare Saved Runs** and upload a baseline and candidate ZIP exported by Cascade Tail Risk. The page validates data-file checksums, shows candidate-minus-baseline summary changes, and lists changed simulation settings, package versions, and source fingerprints. Download the comparison as JSON.
+
+Paired scenario changes are shown only when the saved portfolios match exactly and all recorded ETH/BTC/SOL shocks match by unique simulation ID. Equal seeds alone are insufficient. Unpaired runs still show summary differences, explicitly labeled as separate outcomes. Source and package changes are listed even for paired draws; pairing does not establish why outcomes changed. Fractions retain their original units, and scenario ranges are not confidence intervals.
