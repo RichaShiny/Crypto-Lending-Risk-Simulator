@@ -11,7 +11,7 @@ from src.data_generator import generate_protocol_positions
 
 
 st.set_page_config(
-    page_title="RiskForge · Cascade Tail Risk",
+    page_title="Crypto Lending Risk Simulator · Cascade Tail Risk",
     page_icon="📉",
     layout="wide",
 )

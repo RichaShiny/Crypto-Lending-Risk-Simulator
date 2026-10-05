@@ -17,17 +17,17 @@ from src.stress_engine import (
 
 
 st.set_page_config(
-    page_title="RiskForge",
+    page_title="Crypto Lending Risk Simulator",
     page_icon="📊",
     layout="wide",
 )
 
-st.title("RiskForge")
+st.title("Crypto Lending Risk Simulator")
 
 st.write(
-    "A quantitative protocol risk and stress-testing engine for "
-    "simulating market shocks, estimating liquidation exposure, "
-    "and analyzing systemic risk under uncertainty."
+    "Explore how crypto price drops can trigger loan liquidations, amplify market declines, "
+    "and leave lending protocols with unpaid debt. Adjust market shocks and liquidity "
+    "to compare modeled outcomes."
 )
 
 positions = generate_protocol_positions()
