@@ -253,6 +253,17 @@ for column in ["First-order", "Cascade-aware"]:
 st.dataframe(tail_table, width="stretch", hide_index=True)
 
 st.subheader("Cascade Diagnostics")
+limited = summary["round_limited_simulations"]
+if limited:
+    st.warning(
+        f"{limited} of {n_simulations} scenarios reached the {max_rounds}-round limit "
+        "with liquidatable positions remaining. These outcomes may be incomplete; "
+        "increase Maximum cascade rounds and compare the results."
+    )
+else:
+    st.caption("No scenarios reached the round limit with liquidatable positions remaining. "
+               "This does not guarantee that every liquidation was executable.")
+st.metric("Scenarios reaching the round limit", f"{summary['probability_round_limit_reached']:.1%}")
 col1, col2, col3, col4 = st.columns(4)
 col1.metric(
     "P95 tail amplification",
