@@ -60,3 +60,38 @@ def test_cli_replays_and_refuses_to_overwrite(tmp_path):
     assert second.returncode != 0
     assert 'Output already exists' in second.stderr
     assert output.read_bytes() == saved
+
+
+def test_implicit_market_defaults_are_frozen_for_replay(monkeypatch):
+    from src import simulation
+    from src.run_bundle import load_run_bundle
+
+    positions = generate_protocol_positions(n_positions=12)
+    settings = dict(market_depth_usd={'ETH': 1e6, 'BTC': 2e6, 'SOL': 5e5}, n_simulations=4, seed=19)
+    results = run_cascade_aware_monte_carlo(positions=positions, **settings)
+    bundle = build_run_bundle(positions, results, settings)
+    manifest, _, _, _ = load_run_bundle(bundle)
+    assert manifest['settings']['annual_volatility'] == simulation.ANNUAL_VOLATILITY
+    assert manifest['settings']['correlation_matrix'] == simulation.CORRELATION_MATRIX.tolist()
+    monkeypatch.setattr(simulation, 'ANNUAL_VOLATILITY', {'ETH': 0.1, 'BTC': 0.1, 'SOL': 0.1})
+    monkeypatch.setattr(simulation, 'CORRELATION_MATRIX', np.eye(3))
+    _, _, replayed, _ = load_run_bundle(replay_run_bundle(bundle))
+    pd.testing.assert_frame_equal(replayed, results, check_exact=False, rtol=1e-12, atol=1e-12)
+    assert settings.get('annual_volatility') is None
+    assert settings.get('correlation_matrix') is None
+
+
+def test_legacy_null_assumptions_warn_before_replay():
+    bundle, _ = sample_bundle()
+    output = io.BytesIO()
+    with zipfile.ZipFile(io.BytesIO(bundle)) as source, zipfile.ZipFile(output, 'w') as target:
+        for name in source.namelist():
+            data = source.read(name)
+            if name == 'manifest.json':
+                manifest = json.loads(data)
+                manifest['settings']['annual_volatility'] = None
+                manifest['settings']['correlation_matrix'] = None
+                data = json.dumps(manifest).encode()
+            target.writestr(name, data)
+    with pytest.warns(UserWarning, match='Original assumptions cannot be recovered'):
+        replay_run_bundle(output.getvalue())

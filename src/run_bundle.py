@@ -11,12 +11,14 @@ import io
 import json
 import platform
 import zipfile
+import warnings
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 from src.cascade_simulation import run_cascade_aware_monte_carlo, summarize_cascade_monte_carlo
+from src import simulation
 
 
 def build_run_bundle(positions, results, settings):
@@ -24,8 +26,13 @@ def build_run_bundle(positions, results, settings):
     bound = inspect.signature(run_cascade_aware_monte_carlo).bind(positions=positions, **settings)
     bound.apply_defaults()
     parameters = {key: value for key, value in bound.arguments.items() if key != 'positions'}
-    if parameters['correlation_matrix'] is not None:
-        parameters['correlation_matrix'] = np.asarray(parameters['correlation_matrix']).tolist()
+    # None means an implicit sampler default, not an absence of market assumptions.
+    volatility = parameters['annual_volatility']
+    parameters['annual_volatility'] = dict(simulation.ANNUAL_VOLATILITY if volatility is None else volatility)
+    correlation = parameters['correlation_matrix']
+    parameters['correlation_matrix'] = np.asarray(
+        simulation.CORRELATION_MATRIX if correlation is None else correlation
+    ).tolist()
     files = {
         'positions.csv': positions.to_csv(index=False).encode(),
         'scenarios.csv': results.to_csv(index=False).encode(),
@@ -68,6 +75,12 @@ def replay_run_bundle(bundle):
     """Validate the stored files and rerun using the original positions/settings."""
     manifest, positions, _, _ = load_run_bundle(bundle)
     settings = manifest['settings']
+    if settings.get('annual_volatility') is None or settings.get('correlation_matrix') is None:
+        warnings.warn(
+            'This older bundle did not record explicit market assumptions; replay uses current '
+            'defaults for missing volatility or correlation. Original assumptions cannot be recovered.',
+            UserWarning, stacklevel=2,
+        )
     if settings['correlation_matrix'] is not None:
         settings['correlation_matrix'] = np.asarray(settings['correlation_matrix'])
     results = run_cascade_aware_monte_carlo(positions=positions, **settings)
