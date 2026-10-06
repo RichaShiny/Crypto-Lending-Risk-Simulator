@@ -1,0 +1,8 @@
+{
+  "market_depth_usd": {"ETH": 10000000, "BTC": 15000000, "SOL": 5000000},
+  "n_simulations": 100,
+  "horizon_days": 30,
+  "seed": 42,
+  "distribution": "student_t",
+  "max_rounds": 10
+}

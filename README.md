@@ -481,3 +481,15 @@ Attribution dashboard results are cached in memory for up to one hour (at most e
 ### Cascade round-limit diagnostics
 
 Cascade Tail Risk reports the fraction of scenarios that reached the configured round limit with liquidatable positions still remaining. A warning identifies potentially incomplete runs and suggests increasing the limit and comparing outcomes. Scenario exports preserve this flag and the remaining liquidatable-position count; summaries include the affected scenario count and frequency. Older saved runs without the flag retain an unknown status rather than being reported as converged. An unflagged run does not guarantee all liquidation was executable: the engine can also stop when no sale meets its minimum size.
+
+## Run experiments without the dashboard
+
+Create a simulation bundle from a JSON file of engine settings:
+
+```bash
+python -m src.run_simulation --settings examples/cascade_settings.json --portfolio-size 250 --portfolio-seed 42 --output experiment.zip
+```
+
+The portfolio seed controls synthetic lending positions; the `seed` inside the settings file controls market draws. Omitted engine settings retain the engine defaults and are resolved into the bundle manifest. To use an existing portfolio instead, replace the portfolio flags with `--positions positions.csv` using the exported lending-position schema. JSON settings require `market_depth_usd` and may include engine options such as annual volatility or a correlation matrix in ETH/BTC/SOL order.
+
+The command validates engine inputs, prints the scenario and position counts, and refuses to overwrite an existing bundle. Open its output in Compare Saved Runs or replay it with `python -m src.run_bundle`. Choose distinct output paths for each experiment.
