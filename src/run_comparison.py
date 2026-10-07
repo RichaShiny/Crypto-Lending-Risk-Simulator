@@ -54,3 +54,35 @@ def compare_run_bundles(baseline, candidate):
         'environment_changes': _changes(left_meta.get('environment', {}), right_meta.get('environment', {})),
         'source_changes': _changes(left_meta.get('source_sha256', {}), right_meta.get('source_sha256', {})),
     }
+
+
+def main():
+    """Write a comparison report without opening Streamlit."""
+    import argparse
+    import json
+    import zipfile
+    from pathlib import Path
+
+    parser = argparse.ArgumentParser(description='Compare two saved cascade runs; changes are candidate minus baseline.')
+    parser.add_argument('baseline', type=Path, help='Baseline simulation ZIP')
+    parser.add_argument('candidate', type=Path, help='Candidate simulation ZIP')
+    parser.add_argument('--output', type=Path, required=True, help='New JSON report path')
+    args = parser.parse_args()
+    if args.output.exists():
+        parser.error('Output already exists; choose a new path')
+    try:
+        report = compare_run_bundles(args.baseline.read_bytes(), args.candidate.read_bytes())
+        data = json.dumps(report, indent=2, allow_nan=False)
+        with args.output.open('x') as output:
+            output.write(data)
+    except (OSError, ValueError, KeyError, TypeError, zipfile.BadZipFile) as error:
+        parser.error(str(error))
+    if report['paired']:
+        print('Paired comparison: matching portfolio and recorded market draws.')
+    else:
+        print('Unpaired comparison: summary changes do not isolate a settings effect.')
+    print(f'Saved comparison to {args.output}')
+
+
+if __name__ == '__main__':
+    main()

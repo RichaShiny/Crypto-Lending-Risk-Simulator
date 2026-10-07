@@ -495,3 +495,11 @@ The portfolio seed controls synthetic lending positions; the `seed` inside the s
 The command validates engine inputs, prints the scenario and position counts, and refuses to overwrite an existing bundle. Open its output in Compare Saved Runs or replay it with `python -m src.run_bundle`. Choose distinct output paths for each experiment.
 
 New run bundles store explicit annual volatility and correlation values even when a run uses sampler defaults. Replay therefore preserves those market assumptions if defaults change later. Older bundles with `null` assumptions remain readable, but replay warns that it must use current defaults and cannot recover the original values. Source and dependency differences can still affect replay results.
+
+Compare experiment bundles without opening the dashboard:
+
+```bash
+python -m src.run_comparison baseline.zip candidate.zip --output comparison.json
+```
+
+The CLI writes the same report as Compare Saved Runs and states whether recorded portfolios and market draws support paired comparison. All changes are candidate minus baseline. It validates bundled data checksums and refuses to overwrite an existing report. Unpaired runs remain valid descriptive comparisons, with no within-scenario differences reported.
