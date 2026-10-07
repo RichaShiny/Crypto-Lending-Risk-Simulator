@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import math
 
+import numpy as np
 import pandas as pd
 
 
@@ -93,7 +94,7 @@ def _validate_inputs(
     }
     for column, (lower, upper) in numeric_checks.items():
         values = pd.to_numeric(positions[column], errors="coerce")
-        if values.isna().any():
+        if not np.isfinite(values.to_numpy(dtype=float, na_value=np.nan)).all():
             raise ValueError(f"{column} must contain only finite numeric values")
         if column == "collateral_price":
             invalid_lower = values <= lower
@@ -186,6 +187,8 @@ def run_liquidation_cascade(
     )
 
     state = positions.copy(deep=True).reset_index(drop=True)
+    for column in ("collateral_amount", "collateral_price", "debt_usd", "liquidation_threshold"):
+        state[column] = pd.to_numeric(state[column])
     state["asset"] = state["asset"].astype(str)
     state["initial_debt_usd"] = state["debt_usd"].astype(float)
     state["initial_collateral_amount"] = state["collateral_amount"].astype(float)

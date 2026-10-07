@@ -503,3 +503,5 @@ python -m src.run_comparison baseline.zip candidate.zip --output comparison.json
 ```
 
 The CLI writes the same report as Compare Saved Runs and states whether recorded portfolios and market draws support paired comparison. All changes are candidate minus baseline. It validates bundled data checksums and refuses to overwrite an existing report. Unpaired runs remain valid descriptive comparisons, with no within-scenario differences reported.
+
+Cascade portfolio validation rejects infinite and missing collateral amounts, prices, debts, and liquidation thresholds before calculating outcomes. Accepted numeric strings are normalized on an internal portfolio copy; the caller's data remains unchanged. This prevents nonfinite balances or string arithmetic from producing misleading liquidation results.
