@@ -93,3 +93,38 @@ def test_equal_recorded_seed_is_insufficient_when_shocks_differ():
     assert not report['same_market_draws']
     assert not report['paired']
     assert report['paired_deltas'] == []
+
+
+@pytest.mark.parametrize('candidate_seed,paired', [(42, True), (43, False)])
+def test_comparison_cli_writes_report_and_preserves_existing_output(tmp_path, candidate_seed, paired):
+    import subprocess
+    import sys
+
+    baseline, _ = make_run()
+    candidate, _ = make_run(seed=candidate_seed)
+    left, right, output = tmp_path / 'baseline.zip', tmp_path / 'candidate.zip', tmp_path / 'report.json'
+    left.write_bytes(baseline)
+    right.write_bytes(candidate)
+    command = [sys.executable, '-m', 'src.run_comparison', str(left), str(right), '--output', str(output)]
+    run = subprocess.run(command, capture_output=True, text=True)
+    assert run.returncode == 0, run.stderr
+    assert json.loads(output.read_text()) == compare_run_bundles(baseline, candidate)
+    assert ('Paired comparison:' if paired else 'Unpaired comparison:') in run.stdout
+    saved = output.read_bytes()
+    again = subprocess.run(command, capture_output=True, text=True)
+    assert again.returncode != 0
+    assert 'Output already exists' in again.stderr
+    assert output.read_bytes() == saved
+
+
+def test_comparison_cli_rejects_invalid_archive_without_report(tmp_path):
+    import subprocess
+    import sys
+
+    source, output = tmp_path / 'invalid.zip', tmp_path / 'report.json'
+    source.write_bytes(b'not a ZIP archive')
+    run = subprocess.run([sys.executable, '-m', 'src.run_comparison', str(source), str(source),
+                          '--output', str(output)], capture_output=True, text=True)
+    assert run.returncode != 0
+    assert 'not a zip file' in run.stderr.lower()
+    assert not output.exists()
