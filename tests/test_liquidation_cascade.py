@@ -183,3 +183,29 @@ def test_missing_market_depth_is_rejected():
             initial_shocks={"ETH": -0.10},
             market_depth_usd={},
         )
+
+
+@pytest.mark.parametrize('column', ['collateral_amount', 'collateral_price', 'debt_usd', 'liquidation_threshold'])
+@pytest.mark.parametrize('value', [float('inf'), float('-inf'), float('nan')])
+def test_nonfinite_portfolio_values_are_rejected_before_state_calculation(column, value):
+    from unittest.mock import patch
+
+    positions = fragile_eth_positions()
+    positions[column] = value
+    with patch('src.liquidation_cascade._recalculate_state') as recalculate:
+        with pytest.raises(ValueError, match=f'{column} must contain only finite numeric values'):
+            run_liquidation_cascade(positions, {'ETH': -0.2}, {'ETH': 100_000.0})
+        recalculate.assert_not_called()
+
+
+def test_numeric_strings_are_normalized_without_mutating_caller_portfolio():
+    numeric = fragile_eth_positions()
+    strings = numeric.copy(deep=True)
+    for column in ('collateral_amount', 'collateral_price', 'debt_usd', 'liquidation_threshold'):
+        strings[column] = strings[column].astype(str)
+    original = strings.copy(deep=True)
+    expected = run_liquidation_cascade(numeric, {'ETH': -0.2}, {'ETH': 100_000.0})
+    actual = run_liquidation_cascade(strings, {'ETH': -0.2}, {'ETH': 100_000.0})
+    assert actual.summary == expected.summary
+    pd.testing.assert_frame_equal(actual.final_positions, expected.final_positions)
+    pd.testing.assert_frame_equal(strings, original)
